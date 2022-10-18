@@ -22,6 +22,11 @@ func (u *UserRouterImpl) post() {
 	u.routerGroup.POST("", u.userHandler.InsertUserHdl)
 }
 
+func (u *UserRouterImpl) get() {
+	u.routerGroup.GET("/:id", u.userHandler.GetUserByIDHdl)
+}
+
 func (u *UserRouterImpl) Router() {
 	u.post()
+	u.get()
 }
