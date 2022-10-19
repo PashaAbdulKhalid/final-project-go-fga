@@ -6,6 +6,7 @@ import (
 
 	"github.com/PashaAbdulKhalid/final-project-go-fga/config/postgres"
 	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/user"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserRepoImpl struct {
@@ -38,8 +39,11 @@ func (u *UserRepoImpl) InsertUser(ctx context.Context, insertedUser *user.User) 
 	defer log.Printf("%T - InsertUser executed\n", u)
 	// get gorm client first
 	db := u.pgCln.GetClient()
-	// insert new user
-
+	// hashing password
+	pass := []byte(insertedUser.Password)
+	hashedPass, err := bcrypt.GenerateFromPassword(pass, bcrypt.DefaultCost)
+	insertedUser.Password = string(hashedPass)
+	// insert new user 
 	db.Model(&user.User{}).
 		Create(&insertedUser)
 	//check error
@@ -82,3 +86,4 @@ func (u *UserRepoImpl) GetUserByEmail(ctx context.Context, email string) (result
 	}
 	return result, err
 }
+
