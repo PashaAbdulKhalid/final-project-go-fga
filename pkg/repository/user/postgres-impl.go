@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/PashaAbdulKhalid/final-project-go-fga/config/postgres"
 	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/user"
@@ -24,7 +25,7 @@ func (u *UserRepoImpl) GetUserByID(ctx context.Context, id string) (result user.
 	db := u.pgCln.GetClient()
 	// insert new user
 	db.Model(&user.User{}).
-		Where("id = ?", id).
+		Where("id = ? AND delete_at < ?", id, "1000-01-01").
 		Find(&result)
 	//check error
 	if err = db.Error; err != nil {
@@ -43,7 +44,7 @@ func (u *UserRepoImpl) InsertUser(ctx context.Context, insertedUser *user.User) 
 	pass := []byte(insertedUser.Password)
 	hashedPass, err := bcrypt.GenerateFromPassword(pass, bcrypt.DefaultCost)
 	insertedUser.Password = string(hashedPass)
-	// insert new user 
+	// insert new user
 	db.Model(&user.User{}).
 		Create(&insertedUser)
 	//check error
@@ -87,3 +88,41 @@ func (u *UserRepoImpl) GetUserByEmail(ctx context.Context, email string) (result
 	return result, err
 }
 
+func (u *UserRepoImpl) UpdateUser(ctx context.Context, updatedUser *user.User) (err error) {
+	log.Printf("%T - UpdateUser is invoked]\n", u)
+	defer log.Printf("%T - UpdateUser executed\n", u)
+	// get gorm client first
+	db := u.pgCln.GetClient()
+	// insert new user
+	db.Model(&user.User{}).
+		Where("id = ?", updatedUser.ID).
+		Update("username", updatedUser.Username).
+		Update("email", updatedUser.Email).
+		Update("password", updatedUser.Password).
+		Update("updated_at", time.Now())
+	//check error
+	if err = db.Error; err != nil {
+		log.Printf("error when updating user with ID %v\n",
+			updatedUser.ID)
+	}
+	return err
+}
+
+func (u *UserRepoImpl) DeleteUser(ctx context.Context, deletedUser *user.User) (err error) {
+	log.Printf("%T - DeleteUser is invoked]\n", u)
+	defer log.Printf("%T - DeleteUser executed\n", u)
+	// get gorm client first
+	db := u.pgCln.GetClient()
+
+	deletedUser.DeleteAt = time.Now()
+	// insert new user
+	db.Model(&user.User{}).
+		Where("id = ?", deletedUser.ID).
+		Update("delete_at", deletedUser.DeleteAt)
+	//check error
+	if err = db.Error; err != nil {
+		log.Printf("error when deleting user with ID %v\n",
+			deletedUser.ID)
+	}
+	return err
+}

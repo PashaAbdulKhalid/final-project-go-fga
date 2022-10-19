@@ -19,14 +19,24 @@ func NewUserRouter(ginEngine engine.HttpServer, userHandler user.UserHandler) ro
 }
 
 func (u *UserRouterImpl) post() {
-	u.routerGroup.POST("", u.userHandler.InsertUserHdl)
+	u.routerGroup.POST("/register", u.userHandler.InsertUserHdl)
 }
 
 func (u *UserRouterImpl) get() {
 	u.routerGroup.GET("/:id", u.userHandler.GetUserByIDHdl)
 }
 
+func (u *UserRouterImpl) update() {
+	u.routerGroup.PUT("/:id", u.userHandler.UpdateUserHdl)
+}
+
+func (u *UserRouterImpl) delete() {
+	u.routerGroup.PATCH("/:id", u.userHandler.DeleteUserHdl)
+}
+
 func (u *UserRouterImpl) Router() {
 	u.post()
 	u.get()
+	u.update()
+	u.delete()
 }
