@@ -3,8 +3,8 @@ package user
 import "github.com/gin-gonic/gin"
 
 type UserHandler interface {
+	RegisterUserHdl(ctx *gin.Context)
 	GetUserByIDHdl(ctx *gin.Context)
-	InsertUserHdl(ctx *gin.Context)
 	UpdateUserHdl(ctx *gin.Context)
 	DeleteUserHdl(ctx *gin.Context)
 }

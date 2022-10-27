@@ -1,12 +1,14 @@
 package user
 
-import "context"
+import (
+	"context"
+
+	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/message"
+)
 
 type UserUsecase interface {
-	GetUserByIDSvc(ctx context.Context, id string) (result User, err error)
-	InsertUserSvc(ctx context.Context, input User) (result User, err error)
-	GetUserByUsernameSvc(ctx context.Context, username string) (result User, err error)
-	GetUserByEmailSvc(ctx context.Context, email string) (result User, err error)
-	UpdateUserSvc(ctx context.Context, input User) (result User, err error)
-	DeleteUserSvc(ctx context.Context, input User) (result User, err error)
+	RegisterUserSvc(ctx context.Context, user User) (result User, errMsg message.ErrorMessage)
+	GetUserByIdSvc(ctx context.Context, userId uint64) (result User, errMsg message.ErrorMessage)
+	UpdateUserSvc(ctx context.Context, userId uint64, email string, username string) (idToken string, errMsg message.ErrorMessage)
+	DeleteUserSvc(ctx context.Context, userId uint64) (errMsg message.ErrorMessage)
 }

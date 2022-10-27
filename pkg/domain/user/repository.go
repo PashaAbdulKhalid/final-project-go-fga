@@ -3,10 +3,8 @@ package user
 import "context"
 
 type UserRepo interface {
-	GetUserByID(ctx context.Context, id string) (user User, err error)
-	InsertUser(ctx context.Context, user *User) (err error)
-	GetUserByUsername(ctx context.Context, username string) (user User, err error)
-	GetUserByEmail(ctx context.Context, email string) (user User, err error)
-	UpdateUser(ctx context.Context, user *User) (err error)
-	DeleteUser(ctx context.Context, user *User) (err error)
+	RegisterUser(ctx context.Context, user *User) (err error)
+	GetUserByID(ctx context.Context, userId uint64) (result User, err error)
+	UpdateUser(ctx context.Context,  userId uint64, email string, username string) (result User, err error)
+	DeleteUser(ctx context.Context, userId uint64) (err error)
 }

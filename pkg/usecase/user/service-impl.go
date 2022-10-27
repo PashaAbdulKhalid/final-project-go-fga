@@ -3,10 +3,17 @@ package user
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
-	"strconv"
+	"strings"
+	"time"
 
+	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/claim"
+	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/message"
 	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/user"
+	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/usecase/crypto"
+	"github.com/asaskevich/govalidator"
+	"github.com/google/uuid"
 )
 
 type UserUsecaseImpl struct {
@@ -17,183 +24,183 @@ func NewUserUsecase(userRepo user.UserRepo) user.UserUsecase {
 	return &UserUsecaseImpl{userRepo: userRepo}
 }
 
-func (u *UserUsecaseImpl) GetUserByIDSvc(ctx context.Context, id string) (result user.User, err error) {
+func (u *UserUsecaseImpl) RegisterUserSvc(ctx context.Context, user user.User) (result user.User, errMsg message.ErrorMessage) {
+	log.Printf("%T - InsertUserSvc is invoked]\n", u)
+	defer log.Printf("%T - InsertUserSvc executed\n", u)
+
+	// input validation
+	if isValid, err := govalidator.ValidateStruct(user); !isValid {
+		switch err.Error() {
+		case "username is required":
+			errMsg = message.ErrorMessage{
+				Error: err,
+				Type:  "USERNAME_IS_EMPTY",
+			}
+			return result, errMsg
+		case "email is required":
+			errMsg = message.ErrorMessage{
+				Error: err,
+				Type:  "EMAIL_IS_EMPTY",
+			}
+			return result, errMsg
+		case "invalid email format":
+			errMsg = message.ErrorMessage{
+				Error: err,
+				Type:  "INVALID_EMAIL_FORMAT",
+			}
+			return result, errMsg
+		case "password is required":
+			errMsg = message.ErrorMessage{
+				Error: err,
+				Type:  "PASSWORD_IS_EMPTY",
+			}
+			return result, errMsg
+		case "password must be at least 6 characters long":
+			errMsg = message.ErrorMessage{
+				Error: err,
+				Type:  "INVALID_PASSWORD_FORMAT",
+			}
+			return result, errMsg
+
+		default:
+			errMsg = message.ErrorMessage{
+				Error: err,
+				Type:  "INVALID_PAYLOAD",
+			}
+			return result, errMsg
+		}
+	}
+
+	log.Println("calling register user repo")
+	err := u.userRepo.RegisterUser(ctx, &user)
+	if err != nil {
+		if strings.Contains(err.Error(), `duplicate key value violates unique constraint "idx_username"`) {
+			err = errors.New("username has already been registered")
+			errMsg = message.ErrorMessage{
+				Error: err,
+				Type:  "USERNAME_REGISTERED",
+			}
+			return result, errMsg
+		}
+
+		if strings.Contains(err.Error(), `duplicate key value violates unique constraint "idx_email"`) {
+			err = errors.New("email has already been registered")
+			errMsg = message.ErrorMessage{
+				Error: err,
+				Type:  "EMAIL_REGISTERED",
+			}
+			return result, errMsg
+		}
+	}
+
+	if err != nil {
+		log.Printf("error when fetching data from database:%s\n", err.Error())
+		errMsg = message.ErrorMessage{
+			Error: err,
+			Type:  "INTERNAL_CONNECTION_PROBLEM",
+		}
+		return result, errMsg
+
+	}
+	return user, errMsg
+}
+
+func (u *UserUsecaseImpl) GetUserByIdSvc(ctx context.Context, userId uint64) (result user.User, errMsg message.ErrorMessage) {
 	log.Printf("%T - GetUserByID is invoked]\n", u)
 	defer log.Printf("%T - GetUserByID executed\n", u)
 	// get user from repository (database)
 	log.Println("getting user from user repository")
-	result, err = u.userRepo.GetUserByID(ctx, id)
+	result, err := u.userRepo.GetUserByID(ctx, userId)
 	if err != nil {
 		// ini berarti ada yang salah dengan connection di database
-		log.Println("error when fetching data from database: " + err.Error())
-		err = errors.New("INTERNAL_SERVER_ERROR")
-		return result, err
+		log.Println("error when fetching data from database:  %s\n" + err.Error())
+		errMsg = message.ErrorMessage{
+			Error: err,
+			Type:  "INTERNAL_CONNECTION_PROBLEM",
+		}
+		return result, errMsg
 	}
 	// check user id > 0 ?
 	log.Println("checking user id")
 	if result.ID <= 0 {
 		// kalau tidak berarti user not found
-		log.Println("user is not found: " + id)
-		err = errors.New("NOT_FOUND")
-		return result, err
+		// log.Println("user with id %v is not found", userId)
+		err = fmt.Errorf("user with id %v is not found", userId)
+		errMsg = message.ErrorMessage{
+			Error: err,
+			Type:  "USER_NOT_FOUND",
+		}
+		return result, errMsg
 	}
-	return result, err
+	return result, errMsg
 }
 
-func (u *UserUsecaseImpl) InsertUserSvc(ctx context.Context, input user.User) (result user.User, err error) {
-	log.Printf("%T - InsertUserSvc is invoked]\n", u)
-	defer log.Printf("%T - InsertUserSvc executed\n", u)
-
-	// check if username is already exist
-	usrCheck1, err1 := u.GetUserByUsernameSvc(ctx, input.Username)
-	if err1 == nil {
-		// user found
-		log.Printf("user has been registered with id: %v\n", usrCheck1.ID)
-		err = errors.New("DUPLICATE_DATA")
-		return result, err
-	}
-	// get user for input email first
-	usrCheck, err := u.GetUserByEmailSvc(ctx, input.Email)
-
-	// check user is exist or not
-	if err == nil {
-		// user found
-		log.Printf("email has been registered with id: %v\n", usrCheck.ID)
-		err = errors.New("DUPLICATE_DATA")
-		return result, err
-	}
-	// internal server error condition
-	if err.Error() != "NOT_FOUND" {
-		// internal server error
-		log.Println("got error when checking user from database")
-		return result, err
-	}
-
-	log.Println("Inserting user to database")
-	if err = u.userRepo.InsertUser(ctx, &input); err != nil {
-		log.Printf("error when inserting user:%v\n", err.Error())
-		err = errors.New("INTERNAL_SERVER_ERROR")
-	}
-	return input, err
-}
-
-func (u *UserUsecaseImpl) GetUserByUsernameSvc(ctx context.Context, username string) (result user.User, err error) {
-	log.Printf("%T - GetUserByUsername is invoked]\n", u)
-	defer log.Printf("%T - GetUserByUsername executed\n", u)
-	// get user from repository (database)
-	log.Println("getting user from user repository")
-	result, err = u.userRepo.GetUserByUsername(ctx, username)
-	if err != nil {
-		// ini berarti ada yang salah dengan connection di database
-		log.Println("error when fetching data from database: " + err.Error())
-		err = errors.New("INTERNAL_SERVER_ERROR")
-		return result, err
-	}
-	// check user id > 0 ?
-	log.Println("checking user id")
-	if result.ID <= 0 {
-		// kalau tidak berarti user not found
-		log.Println("user is not found: " + username)
-		err = errors.New("NOT_FOUND")
-		return result, err
-	}
-	return result, err
-}
-
-func (u *UserUsecaseImpl) GetUserByEmailSvc(ctx context.Context, email string) (result user.User, err error) {
-	log.Printf("%T - GetUserByEmail is invoked]\n", u)
-	defer log.Printf("%T - GetUserByEmail executed\n", u)
-	// get user from repository (database)
-	log.Println("getting user from user repository")
-	result, err = u.userRepo.GetUserByEmail(ctx, email)
-	if err != nil {
-		// ini berarti ada yang salah dengan connection di database
-		log.Println("error when fetching data from database: " + err.Error())
-		err = errors.New("INTERNAL_SERVER_ERROR")
-		return result, err
-	}
-	// check user id > 0 ?
-	log.Println("checking user id")
-	if result.ID <= 0 {
-		// kalau tidak berarti user not found
-		log.Println("user is not found: " + email)
-		err = errors.New("NOT_FOUND")
-		return result, err
-	}
-	return result, err
-}
-
-func (u *UserUsecaseImpl) UpdateUserSvc(ctx context.Context, input user.User) (result user.User, err error) {
+func (u *UserUsecaseImpl) UpdateUserSvc(ctx context.Context, userId uint64, email string, username string) (idToken string, errMsg message.ErrorMessage) {
 	log.Printf("%T - DeleteUserSvc is invoked]\n", u)
 	defer log.Printf("%T - DeleteUserSvc executed\n", u)
-	// check user is exist or not
-	log.Println("checking user is exist or not")
-	Id := strconv.FormatUint(input.ID, 10)
-	// check user is exist or not
-	result, err = u.GetUserByIDSvc(ctx, Id)
-	if err != nil {
-		// ini berarti ada yang salah dengan connection di database
-		log.Println("error when fetching data from database: " + err.Error())
-		err = errors.New("INTERNAL_SERVER_ERROR")
-		return result, err
+	// check email validation
+	if email == "" {
+		errMsg := message.ErrorMessage{
+			Error: errors.New("email is required"),
+			Type:  "EMAIL_IS_EMPTY",
+		}
+		return idToken, errMsg
 	}
-	// check user id > 0 ?
-	log.Println("checking user id")
-	if result.ID <= 0 {
-		// kalau tidak berarti user not found
-		log.Println("user is not found: " + Id)
-		err = errors.New("NOT_FOUND")
-		return result, err
-	}
-	// check if username is already exist
-	usrCheck1, err1 := u.GetUserByUsernameSvc(ctx, input.Username)
-	if err1 == nil {
-		// user found
-		log.Printf("user has been registered with id: %v\n", usrCheck1.ID)
-		err = errors.New("DUPLICATE_DATA")
-		return result, err
-	}
-	// get user for input email first
-	usrCheck, err := u.GetUserByEmailSvc(ctx, input.Email)
 
-	// check user is exist or not
-	if err == nil {
-		// user found
-		log.Printf("email has been registered with id: %v\n", usrCheck.ID)
-		err = errors.New("DUPLICATE_DATA")
-		return result, err
+	if !govalidator.IsEmail(email) {
+		errMsg := message.ErrorMessage{
+			Error: errors.New("invalid email format"),
+			Type:  "INVALID_EMAIL_FORMAT",
+		}
+		return idToken, errMsg
+	}
+
+	// check username validation
+	if username == "" {
+		errMsg := message.ErrorMessage{
+			Error: errors.New("username is required"),
+			Type:  "USERNAME_IS_EMPTY",
+		}
+		return idToken, errMsg
 	}
 
 	// update user
-	log.Println("updating user from database")
-	if err = u.userRepo.UpdateUser(ctx, &input); err != nil {
-		log.Printf("error when updating user:%v\n", err.Error())
-		err = errors.New("INTERNAL_SERVER_ERROR")
+	result, err := u.userRepo.UpdateUser(ctx, userId, email, username)
+
+	if err != nil {
+		log.Println("error when fetching data from database:  %s\n" + err.Error())
+		errMsg = message.ErrorMessage{
+			Error: err,
+			Type:  "INTERNAL_CONNECTION_PROBLEM",
+		}
+		return idToken, errMsg
 	}
-	return result, err
+
+	claimId := claim.IDToken{
+		JWTID:    uuid.New(),
+		Username: result.Username,
+		Email:    result.Email,
+		DOB:      time.Time(result.DOB),
+	}
+	idToken, _ = crypto.CreateJWT(ctx, claimId)
+
+	return idToken, errMsg
 }
 
-func (u *UserUsecaseImpl) DeleteUserSvc(ctx context.Context, input user.User) (result user.User, err error) {
+func (u *UserUsecaseImpl) DeleteUserSvc(ctx context.Context, userId uint64) (errMsg message.ErrorMessage) {
 	log.Printf("%T - DeleteUserSvc is invoked]\n", u)
 	defer log.Printf("%T - DeleteUserSvc executed\n", u)
-	// check user is exist or not
-	log.Println("checking user is exist or not")
-	Id := strconv.FormatUint(input.ID, 10)
-	// check user is exist or not
-	result, err = u.GetUserByIDSvc(ctx, Id)
-	if err != nil {
-		// ini berarti ada yang salah dengan connection di database
-		log.Println("error when fetching data from database: " + err.Error())
-		err = errors.New("NOT_FOUND")
-		return result, err
-	}
-
 	// delete user
-	log.Println("deleting user from database")
-	if err = u.userRepo.DeleteUser(ctx, &input); err != nil {
-		log.Printf("error when deleting user:%v\n", err.Error())
-		err = errors.New("INTERNAL_SERVER_ERROR")
-	}
-	return input, err
-}
+	err := u.userRepo.DeleteUser(ctx, userId)
 
+	if err != nil {
+		log.Println("error when fetching data from database:  %s\n" + err.Error())
+		errMsg = message.ErrorMessage{
+			Error: err,
+			Type:  "INTERNAL_CONNECTION_PROBLEM",
+		}
+		return errMsg
+	}
+
+	return errMsg
+}

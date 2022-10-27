@@ -1,28 +1,45 @@
 package main
 
 import (
-	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/PashaAbdulKhalid/final-project-go-fga/config/postgres"
-	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/message"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 
 	engine "github.com/PashaAbdulKhalid/final-project-go-fga/config/gin"
 	userrepo "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/repository/user"
 	userhandler "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/server/http/handler/user"
-    userrouter "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/server/http/router/v1"
 	userusecase "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/usecase/user"
+
+	authrepo "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/repository/auth"
+	authhandler "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/server/http/handler/auth"
+	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/server/http/middleware"
+	authusecase "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/usecase/auth"
+
+	router "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/server/http/router/v1"
 )
 
+func init() {
+	godotenv.Load(".env")
+
+}
 func main() {
+	postgresHost := os.Getenv("MY_GRAM_POSTGRES_HOST")
+	postgresPort := os.Getenv("MY_GRAM_POSTGRES_PORT")
+	postgresDatabase := os.Getenv("MY_GRAM_POSTGRES_DATABASE")
+	postgresUsername := os.Getenv("MY_GRAM_POSTGRES_USERNAME")
+	postgresPassword := os.Getenv("MY_GRAM_POSTGRES_PASSWORD")
+	// sharedKey := os.Getenv("MY_GRAM_JWT_SHARED_KEY")
+
 	postgresCln := postgres.NewPostgresConnection(postgres.Config{
-		Host:         "localhost",
-		Port:         "5432",
-		User:         "postgres",
-		Password:     "12345",
-		DatabaseName: "final-project",
+		Host:         postgresHost,
+		Port:         postgresPort,
+		User:         postgresUsername,
+		Password:     postgresPassword,
+		DatabaseName: postgresDatabase,
 	})
 
 	// gin engine
@@ -35,33 +52,25 @@ func main() {
 	)
 
 	startTime := time.Now()
-	
 	ginEngine.GetGin().GET("/", func(ctx *gin.Context) {
-		respMap := map[string]any{
-			"code":       0,
-			"message":    "server up and running",
-			"start_time": startTime,
-		}
-
-		var respStruct message.Response
-
-		resByte, err := json.Marshal(respMap)
-		if err != nil {
-			panic(err)
-		}
-
-		err = json.Unmarshal(resByte, &respStruct)
-		if err != nil {
-			panic(err)
-		}
-
-		ctx.JSON(http.StatusOK, respStruct)
+		ctx.JSON(http.StatusOK, gin.H{
+			"message": "server up and running",
+			"started": startTime,
+		})
 	})
 
 	userRepo := userrepo.NewUserRepo(postgresCln)
 	userUsecase := userusecase.NewUserUsecase(userRepo)
 	useHandler := userhandler.NewUserHandler(userUsecase)
-	userrouter.NewUserRouter(ginEngine, useHandler).Router()
+
+	authRepo := authrepo.NewAuthRepo(postgresCln)
+	authUsecase := authusecase.NewAuthUsecase(authRepo, userUsecase)
+	authHandler := authhandler.NewAuthHandler(authUsecase)
+
+	authMiddleware := middleware.NewAuthMiddleware(userUsecase)
+
+	router.NewUserRouter(ginEngine, useHandler, authMiddleware).Routers()
+	router.NewAuthRouter(ginEngine, authHandler, authMiddleware).Routers()
 
 	ginEngine.Serve()
 
