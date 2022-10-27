@@ -1,20 +1,15 @@
 package photo
 
 import (
-	"time"
-
 	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/comment"
-	"gorm.io/gorm"
+	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/gormmodel"
 )
 
 type Photo struct {
-	ID        uint   `gorm:"primaryKey"`
-	Title     string `gorm:"not null"`
-	Caption   string
-	Url       string            `gorm:"not null"`
-	UserID    uint              `gorm:"not null"`
-	Comment   []comment.Comment `gorm:"foreignKey:PhotoID"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt
+	gormmodel.GormModel
+	Title    string            `gorm:"not null" json:"title" valid:"required~photo title is required"`
+	Caption  string            `json:"caption"`
+	Url      string            `gorm:"not null" json:"url" valid:"required~photo url is required,url~invalid url format"`
+	UserID   uint64            `json:"user_id"`
+	Comments []comment.Comment `json:"comments"`
 }

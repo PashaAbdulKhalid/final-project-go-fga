@@ -44,7 +44,7 @@ func (u *UserHdlImpl) RegisterUserHdl(ctx *gin.Context) {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 			"code":    96,
 			"type":    "BAD_REQUEST",
-			"message": "Your age at least 8 years old",
+			"message": "Your age must >= 8 years old",
 		})
 		return
 	}
@@ -105,7 +105,7 @@ func (u *UserHdlImpl) GetUserByIDHdl(ctx *gin.Context) {
 		"data": gin.H{
 			"id":            result.ID,
 			"username":      result.Username,
-			"social_medias": result.Sosmeds,
+			"social_medias": result.SocialMedias,
 		},
 	})
 }

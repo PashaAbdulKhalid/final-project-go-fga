@@ -5,9 +5,9 @@ CREATE TABLE users(
     password VARCHAR(255) NOT NULL,
     dob DATE ,
     age INT NOT NULL,
-    create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_at TIMESTAMP ,
-    delete_at TIMESTAMP 
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP ,
+    deleted_at TIMESTAMP,
 );
 
 CREATE TABLE photos(
@@ -16,9 +16,9 @@ CREATE TABLE photos(
     caption VARCHAR(255),
     url VARCHAR(255) NOT NULL,
     user_id INT NOT NULL,
-    create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_at TIMESTAMP ,
-    delete_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP ,
+    deleted_at TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
@@ -27,9 +27,9 @@ CREATE TABLE comments(
     photo_id INT NOT NULL,
     user_id INT NOT NULL,
     message TEXT NOT NULL,
-    create_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_at TIMESTAMP ,
-    delete_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP ,
+    deleted_at TIMESTAMP,
     FOREIGN KEY (photo_id) REFERENCES photos(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
@@ -39,6 +39,9 @@ CREATE TABLE social_medias(
     name VARCHAR(255) NOT NULL,
     url VARCHAR(255) NOT NULL,
     user_id INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP ,
+    deleted_at TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 

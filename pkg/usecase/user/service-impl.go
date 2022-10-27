@@ -46,7 +46,7 @@ func (u *UserUsecaseImpl) RegisterUserSvc(ctx context.Context, user user.User) (
 		case "invalid email format":
 			errMsg = message.ErrorMessage{
 				Error: err,
-				Type:  "INVALID_EMAIL_FORMAT",
+				Type:  "WRONG_EMAIL_FORMAT",
 			}
 			return result, errMsg
 		case "password is required":
@@ -74,7 +74,7 @@ func (u *UserUsecaseImpl) RegisterUserSvc(ctx context.Context, user user.User) (
 	log.Println("calling register user repo")
 	err := u.userRepo.RegisterUser(ctx, &user)
 	if err != nil {
-		if strings.Contains(err.Error(), `duplicate key value violates unique constraint "idx_username"`) {
+		if strings.Contains(err.Error(), `duplicate key value violates unique constraint "users_username_key"`) {
 			err = errors.New("username has already been registered")
 			errMsg = message.ErrorMessage{
 				Error: err,
@@ -83,7 +83,7 @@ func (u *UserUsecaseImpl) RegisterUserSvc(ctx context.Context, user user.User) (
 			return result, errMsg
 		}
 
-		if strings.Contains(err.Error(), `duplicate key value violates unique constraint "idx_email"`) {
+		if strings.Contains(err.Error(), `duplicate key value violates unique constraint "users_email_key"`) {
 			err = errors.New("email has already been registered")
 			errMsg = message.ErrorMessage{
 				Error: err,

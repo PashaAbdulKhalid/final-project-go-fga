@@ -8,7 +8,7 @@ import (
 	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/comment"
 	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/gormmodel"
 	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/photo"
-	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/sosmed"
+	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/socmed"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -36,14 +36,14 @@ func (ct *cusTime) UnmarshalJSON(b []byte) error {
 
 type User struct {
 	gormmodel.GormModel
-	Username string            `gorm:"not null;uniqueIndex" json:"username" valid:"required~Username is required"`
-	Email    string            `gorm:"not null;uniqueIndex" json:"email" valid:"required~Email is required"`
-	Password string            `gorm:"not null" json:"password" valid:"required~Password is required,minstringlength(6)~Password must be at least 6 characters"`
-	DOB      cusTime           `gorm:"not null" json:"dob" valid:"required~Date of birth is required"`
-	Age      int               `gorm:"not null" json:"age" valid:"required~Age is required"`
-	Sosmeds  []sosmed.Sosmed   `json:"sosmed"`
-	Photos   []photo.Photo     `json:"photo"`
-	Comments []comment.Comment `json:"comment"`
+	Username     string               `gorm:"not null;uniqueIndex" json:"username" valid:"required~username is required"`
+	Email        string               `gorm:"not null;uniqueIndex" json:"email" valid:"required~email is required,email~invalid email format"`
+	Password     string               `gorm:"not null" json:"password" valid:"required~Password is required,minstringlength(6)~password must be at least 6 characters long"`
+	DOB          cusTime              `gorm:"not null" json:"dob" valid:"required~Date of birth is required"`
+	Age          int                  `gorm:"not null" json:"age"`
+	SocialMedias []socmed.SocialMedia `json:"social_medias"`
+	Photos       []photo.Photo        `json:"photos"`
+	Comments     []comment.Comment    `json:"comments"`
 }
 
 func (u *User) BeforeCreate(tx *gorm.DB) (err error) {

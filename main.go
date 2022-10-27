@@ -19,6 +19,10 @@ import (
 	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/server/http/middleware"
 	authusecase "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/usecase/auth"
 
+	socialmediarepo "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/repository/socmed"
+	socialmediahandler "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/server/http/handler/socmed"
+	socialmediausecase "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/usecase/socmed"
+
 	router "github.com/PashaAbdulKhalid/final-project-go-fga/pkg/server/http/router/v1"
 )
 
@@ -67,10 +71,15 @@ func main() {
 	authUsecase := authusecase.NewAuthUsecase(authRepo, userUsecase)
 	authHandler := authhandler.NewAuthHandler(authUsecase)
 
+	socialMediaRepo := socialmediarepo.NewSocialMediaRepo(postgresCln)
+	socialMediaUsecase := socialmediausecase.NewSocialMediaUsecase(socialMediaRepo)
+	socialMediaHandler := socialmediahandler.NewSocialMediaHandler(socialMediaUsecase)
+
 	authMiddleware := middleware.NewAuthMiddleware(userUsecase)
 
 	router.NewUserRouter(ginEngine, useHandler, authMiddleware).Routers()
 	router.NewAuthRouter(ginEngine, authHandler, authMiddleware).Routers()
+	router.NewSocialMediaRouter(ginEngine, socialMediaHandler, authMiddleware).Routers()
 
 	ginEngine.Serve()
 

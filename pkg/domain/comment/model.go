@@ -1,26 +1,12 @@
 package comment
 
 import (
-	"time"
-
-	"gorm.io/gorm"
+	"github.com/PashaAbdulKhalid/final-project-go-fga/pkg/domain/gormmodel"
 )
 
 type Comment struct {
-	ID        uint   `gorm:"primaryKey"`
-	PhotoID   uint   `gorm:"not null"`
-	UserID    uint   `gorm:"not null"`
-	Message   string `gorm:"not null"`
-	CreatedAt time.Time 
-	UpdatedAt time.Time 
-	Photo     Photo
-	DeletedAt gorm.DeletedAt
-}
-
-type Photo struct {
-	ID      uint   `gorm:"primaryKey"`
-	Title   string `gorm:"not null"`
-	Caption string
-	Url     string `gorm:"not null"`
-	UserID  uint   `gorm:"not null"`
+	gormmodel.GormModel
+	UserID  uint64 `json:"user_id"`
+	PhotoID uint64 `json:"photo_id" valid:"required~photo id is required"`
+	Message string `gorm:"not null" json:"message" valid:"required~comment message is required"`
 }
